@@ -129,6 +129,72 @@ git push -u origin main
 
 Si al recargar la página del repositorio en GitHub ves tu archivo `prueba.txt`, **todo quedó instalado y conectado correctamente**.
 
+### 2.7 "Me marca error en `git push -u origin main`" — diagnóstico a prueba de errores
+
+Este es el tropiezo más común de quien conecta Git con GitHub por primera vez. Antes que nada, corre estos tres comandos — con lo que devuelvan casi siempre se identifica la causa:
+
+```bash
+git branch          # ¿cómo se llama tu rama actual?
+git remote -v       # ¿a qué URL está conectado "origin"?
+git log --oneline   # ¿ya tienes al menos un commit?
+```
+
+**Causa #1 (la más común, por mucho): el nombre de la rama no coincide.**
+`git init` crea tu rama local llamada **`master`** por defecto, salvo que tengas configurado lo contrario — pero GitHub, desde 2020, usa **`main`** por defecto en repositorios nuevos. Si le pides a Git que suba `main` y tu rama local se llama `master`, verás:
+```
+error: src refspec main does not match any file(s) known to it
+```
+Solución: fuerza el nombre de tu rama antes del push (funciona sin importar cómo se llamaba antes):
+```bash
+git branch -M main
+git push -u origin main
+```
+
+**Causa #2: el repositorio de GitHub no está realmente vacío.**
+Si al crearlo marcaste "Add a README file" (o `.gitignore` o licencia), GitHub ya generó un primer commit ahí, sin relación con tu historial local. Verás:
+```
+! [rejected]        main -> main (fetch first)
+hint: Updates were rejected because the remote contains work that you do not have locally.
+```
+Solución A (la más simple): borra ese repositorio en GitHub y créalo de nuevo **sin marcar ninguna casilla**, para que quede completamente vacío.
+Solución B (si no quieres borrarlo): combina los historiales:
+```bash
+git pull origin main --allow-unrelated-histories
+git push -u origin main
+```
+
+**Causa #3: falla de autenticación.**
+```
+remote: Support for password authentication was removed on August 13, 2021.
+fatal: Authentication failed
+```
+GitHub ya no acepta tu contraseña normal por terminal. Si te pide usuario y contraseña, en el campo de "contraseña" debes pegar tu **token de acceso personal** (sección 2.4), no tu contraseña real de GitHub.
+
+**Causa #4: la URL del remoto está mal o no se agregó.**
+```
+fatal: 'origin' does not appear to be a git repository
+```
+o
+```
+fatal: remote origin already exists
+```
+Solución:
+```bash
+git remote -v                                    # revisa qué hay configurado
+git remote remove origin                         # si está mal, lo quitas
+git remote add origin https://github.com/tu-usuario/tu-repo.git   # y lo agregas bien
+```
+
+**El procedimiento completo, en el orden que evita las 4 causas de una sola pasada:**
+```bash
+git log --oneline                # 1. confirma que ya tienes al menos un commit
+git branch -M main                # 2. fuerza que tu rama se llame "main"
+git remote -v                     # 3. revisa que "origin" apunte a la URL correcta
+git push -u origin main           # 4. empuja tus cambios
+```
+
+Si después de esto el error persiste, el mensaje de error exacto (copiado tal cual) casi siempre indica la causa con precisión, aunque no sea ninguna de las cuatro anteriores.
+
 ---
 
 ## 3. ¿Qué problema resuelve Git?
@@ -415,7 +481,44 @@ git diff       # ¿qué líneas exactas cambiaron, palabra por palabra?
 
 ---
 
-## 9. ¿Dónde entra GitHub?
+## 9. Lo contrario de `git init`: cómo dejar de usar Git en una carpeta
+
+Con el tiempo puede que termines un proyecto y quieras que Git deje de monitorear esa carpeta — que vuelva a ser una carpeta normal en tu computadora, sin historial de versiones.
+
+Todo lo que Git necesita para llevar el control de tu proyecto vive en **una sola carpeta oculta llamada `.git`**, en la raíz del repositorio. Borrar esa carpeta es todo lo que hace falta.
+
+### 9.1 El procedimiento
+
+**1. Confirma dónde está la carpeta oculta:**
+```bash
+ls -a
+```
+(En Windows con PowerShell: `Get-ChildItem -Force`. En el Explorador de archivos: activa "Elementos ocultos" en la pestaña Vista.)
+
+**2. Bórrala:**
+
+| Sistema | Comando |
+|---|---|
+| macOS / Linux (terminal) | `rm -rf .git` |
+| Windows (PowerShell) | `Remove-Item -Recurse -Force .git` |
+| Windows (símbolo del sistema) | `rmdir /s /q .git` |
+
+**3. Confirma que ya no es un repositorio:**
+```bash
+git status
+```
+Debería responder `fatal: not a git repository (or any of the parent directories): .git` — eso confirma que la carpeta volvió a ser una carpeta normal.
+
+### 9.2 Dos advertencias importantes
+
+- **Es irreversible.** Al borrar `.git` desaparece todo el historial de commits, ramas y etiquetas que solo existían en tu computadora. Tus archivos de código quedan intactos — lo único que se pierde es el registro de cambios. Si crees que podrías necesitar ese historial después, copia la carpeta `.git` antes de borrarla, en vez de perderla para siempre.
+- **No afecta a GitHub.** Si ya habías hecho `push` de ese proyecto, borrar `.git` localmente no borra nada en GitHub — el repositorio remoto sigue existiendo tal cual. Para eliminarlo también de ahí es una acción aparte, igualmente irreversible: `Settings → General → Danger Zone → Delete this repository`.
+
+> **Nota:** si en realidad solo quieres desconectar la carpeta de un repositorio de GitHub pero conservando tu historial local, eso es distinto: `git remote remove origin`. Borrar `.git` es para cuando quieres que la carpeta deje de tener cualquier rastro de Git.
+
+---
+
+## 10. ¿Dónde entra GitHub?
 
 Hasta aquí, todo lo que vimos pasa **solo en tu computadora**. Nadie más puede ver tu historial de commits, y si tu disco duro muere, lo pierdes todo. Ahí es donde entra GitHub: es el lugar donde subes tu repositorio para tener una copia en la nube y compartirla.
 
@@ -457,7 +560,7 @@ Esto crea la carpeta automáticamente, con todo el historial incluido, ya conect
 
 ---
 
-## 10. Conceptos exclusivos de GitHub (no de Git)
+## 11. Conceptos exclusivos de GitHub (no de Git)
 
 Estos son conceptos que existen porque GitHub es una plataforma social/colaborativa, no porque Git los necesite:
 
@@ -480,7 +583,7 @@ Público: cualquier persona en internet puede verlo (aunque no necesariamente ed
 
 ---
 
-## 11. Un día típico trabajando con Git y GitHub
+## 12. Un día típico trabajando con Git y GitHub
 
 Para amarrar todo, así se ve un flujo de trabajo real:
 
@@ -502,7 +605,7 @@ Para amarrar todo, así se ve un flujo de trabajo real:
 
 ---
 
-## 12. Errores típicos de quien empieza (y cómo entenderlos)
+## 13. Errores típicos de quien empieza (y cómo entenderlos)
 
 | Situación | Qué está pasando en realidad |
 |---|---|
@@ -514,7 +617,7 @@ Para amarrar todo, así se ve un flujo de trabajo real:
 
 ---
 
-## 13. Glosario rápido para tener a la mano
+## 14. Glosario rápido para tener a la mano
 
 | Término | En una frase |
 |---|---|
@@ -535,7 +638,7 @@ Para amarrar todo, así se ve un flujo de trabajo real:
 
 ---
 
-## 14. Lo que hay que recordar si solo te queda una idea
+## 15. Lo que hay que recordar si solo te queda una idea
 
 **Git** es el motor que lleva el historial de cambios de tu proyecto, en tu propia computadora.
 **GitHub** es el lugar en internet donde guardas una copia de ese historial y lo compartes con otras personas.
