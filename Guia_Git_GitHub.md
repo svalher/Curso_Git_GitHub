@@ -185,7 +185,40 @@ git remote remove origin                         # si está mal, lo quitas
 git remote add origin https://github.com/tu-usuario/tu-repo.git   # y lo agregas bien
 ```
 
-**El procedimiento completo, en el orden que evita las 4 causas de una sola pasada:**
+**Causa #5: Git sigue usando un token viejo que ya borraste (guardado en caché).**
+```
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed
+```
+Esto pasa cuando generaste un token nuevo en GitHub, pero tu sistema todavía tiene guardado el token **anterior** y lo sigue reenviando sin preguntarte. Hay que borrar esa credencial guardada para que Git vuelva a pedirla:
+
+- **Windows:** Inicio → "Administrador de credenciales" → pestaña "Credenciales de Windows" → busca `git:https://github.com` → Quitar.
+- **macOS:** app Acceso a Llaveros → busca `github.com` → elimina la entrada de contraseña de Internet.
+- **Linux:** revisa `git config --global credential.helper`. Si es `store`, borra la línea de `github.com` en `~/.git-credentials`. Si es `cache`, corre `git credential-cache exit`.
+
+Después de borrar la credencial vieja, vuelve a intentar `git push`: te pedirá usuario y contraseña de nuevo, y ahí pegas el token **nuevo**.
+
+> **¿No encuentras la credencial en el Administrador de Windows?** A veces Git Credential Manager la guarda dentro de la subsección "Credenciales genéricas", colapsada dentro de la pestaña "Credenciales de Windows" — fácil de pasar por alto. En vez de buscarla a mano, es más confiable pedirle a Git que la borre directamente:
+> ```powershell
+> git credential-manager github logout
+> ```
+> Si ese comando no existe en tu versión de Git, usa el método universal (funciona sin importar dónde esté guardada):
+> ```powershell
+> git credential reject
+> ```
+> y cuando la terminal quede esperando texto, escribe:
+> ```
+> protocol=https
+> host=github.com
+> ```
+> seguido de una línea vacía y luego **Ctrl+Z** + Enter para terminar. Después de esto, `git push` debería pedirte credenciales frescas.
+
+Desbloqueo rápido alternativo (sin tocar el Administrador de credenciales), tecleado directo en la terminal, sin guardarlo con `git remote set-url`:
+```bash
+git push https://tu-usuario:TU_TOKEN_NUEVO@github.com/tu-usuario/tu-repo.git main
+```
+
+**El procedimiento completo, en el orden que evita las causas más comunes de una sola pasada:**
 ```bash
 git log --oneline                # 1. confirma que ya tienes al menos un commit
 git branch -M main                # 2. fuerza que tu rama se llame "main"
@@ -193,7 +226,7 @@ git remote -v                     # 3. revisa que "origin" apunte a la URL corre
 git push -u origin main           # 4. empuja tus cambios
 ```
 
-Si después de esto el error persiste, el mensaje de error exacto (copiado tal cual) casi siempre indica la causa con precisión, aunque no sea ninguna de las cuatro anteriores.
+Si después de esto el error persiste, el mensaje de error exacto (copiado tal cual) casi siempre indica la causa con precisión, aunque no sea ninguna de las anteriores.
 
 ---
 
