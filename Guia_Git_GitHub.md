@@ -212,6 +212,8 @@ Después de borrar la credencial vieja, vuelve a intentar `git push`: te pedirá
 > host=github.com
 > ```
 > seguido de una línea vacía y luego **Ctrl+Z** + Enter para terminar. Después de esto, `git push` debería pedirte credenciales frescas.
+>
+> **Último recurso, si nada de lo anterior funciona:** reinstalar Git. Esto reinstala también Git Credential Manager desde cero, lo cual suele limpiar cualquier credencial corrupta o mal vinculada que haya quedado atorada — es más contundente que buscar la entrada específica a mano, y en la práctica resuelve la mayoría de estos bloqueos persistentes.
 
 Desbloqueo rápido alternativo (sin tocar el Administrador de credenciales), tecleado directo en la terminal, sin guardarlo con `git remote set-url`:
 ```bash
